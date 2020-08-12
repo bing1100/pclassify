@@ -1,0 +1,32 @@
+-----------
+Nearest_Neighbors
+Training Acc: 0.9625594294770206
+Testing Acc: 0.948306595365419
+-----------
+Gaussian_Process
+Training Acc: 0.9908874801901744
+Testing Acc: 0.9625668449197861
+-----------
+Decision_Tree
+Training Acc: 0.8977812995245642
+Testing Acc: 0.9001782531194296
+-----------
+Random_Forest
+Training Acc: 0.9007527733755943
+Testing Acc: 0.8859180035650623
+-----------
+Neural_Net
+Training Acc: 0.8791600633914421
+Testing Acc: 0.8698752228163993
+-----------
+AdaBoost
+Training Acc: 0.6386687797147385
+Testing Acc: 0.6399286987522281
+-----------
+Naive_Bayes
+Training Acc: 0.9031299524564184
+Testing Acc: 0.910873440285205
+-----------
+QDA
+Training Acc: 0.9605784469096672
+Testing Acc: 0.9447415329768271

@@ -39,7 +39,7 @@ names = ["Nearest_Neighbors", "Gaussian_Process", "Decision_Tree",
          "Naive_Bayes", "QDA"]
 classifiers = [
     KNeighborsClassifier(10),
-    GaussianProcessClassifier(1.0 * RBF(1.0)),
+    GaussianProcessClassifier(warm_start=True, multi_class='one_vs_one', n_jobs=-1),
     DecisionTreeClassifier(max_depth=5),
     RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
     MLPClassifier(alpha=1, max_iter=1000),
@@ -64,10 +64,13 @@ fTrain, fTest, lTrain, lTest = train_test_split(features, labels, stratify=label
 
 def runClassifier(idx):
     name, clf = names[idx], classifiers[idx]
+    print('-----------\n Training {}...\n'.format(name))
     clf.fit(fTrain, lTrain)
     trainScore = clf.score(fTrain, lTrain)
     testScore = clf.score(fTest, lTest)
-    return '-----------\n{}\nTraining Acc: {}\nTesting Acc: {}\n'.format(name, trainScore, testScore)
+    line = '-----------\n{}\nTraining Acc: {}\nTesting Acc: {}\n'.format(name, trainScore, testScore)
+    print(line)
+    return line
 
 p = Pool(NUMPROCESS)
 lines = p.map(runClassifier, list(range(len(names))))
