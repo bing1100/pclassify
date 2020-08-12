@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 import plotly.express as px
 import statistics as s
 import numpy as np
+import pandas as pd
 
 FILEROOT = "/media/bhux/ssd/airplane/train/train"
 SHOWFIGURES = False
@@ -22,7 +23,7 @@ data = {
     "other": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[]}
 }
 
-labels = {
+features = {
     "wLen": ["Wing Lengths Histogram"],
     "wSpan": ["Wing Spans Histogram"],
     "wAngle": ["Wing Angle Histogram"],
@@ -85,7 +86,7 @@ for label in data.keys():
         lines.append("Var: " + str(s.variance(fData)) + "\n")
         lines.append("Quantiles: " + str(np.quantile(fData, [0.05,0.1,0.15,0.2,0.8,0.85,0.90,0.95])) + "\n")
 
-        fig = px.histogram(data[label][feature], marginal="rug", title=labels[feature][0])
+        fig = px.histogram(fData, marginal="rug", title=features[feature][0])
 
         if SAVEFIGURES:
             if not os.path.exists("./measureData/" + label):
@@ -97,3 +98,17 @@ for label in data.keys():
     
     with open("./measureData/" + label + "/statistics.txt",'w') as target:
         target.writelines(lines)
+
+for feature in features.keys():
+    df = []
+    for label in data.keys():
+        for val in data[label][feature]:
+            df.append({"label": label, feature: val})
+    
+    df = pd.DataFrame.from_dict(data=df)
+
+    title = feature + " Box Plot"
+
+    fig = px.box(df, x="label", y=feature, points="all", title=title)
+    if SAVEFIGURES:
+        fig.write_image("./measureData/" + str(feature) + "_box_plot.png")
