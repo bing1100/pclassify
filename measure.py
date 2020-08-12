@@ -35,6 +35,7 @@ features = {
 f = open("./resolution.txt", "r")
 lines = (f.read()).split("\n")
 
+# Generate Features From Keypoints
 for line in lines:
     name = ((line.split(","))[0].split("."))[0]
     sRes = float((line.split(","))[1])
@@ -72,6 +73,7 @@ for line in lines:
         
         idx += 1
 
+# Create Statistics and Histograms for each plane class
 for label in data.keys():
     lines = []
     for feature in data[label].keys():
@@ -99,6 +101,7 @@ for label in data.keys():
     with open("./measureData/" + label + "/statistics.txt",'w') as target:
         target.writelines(lines)
 
+# Create Box Plots for comparison between classes
 for feature in features.keys():
     df = []
     for label in data.keys():
@@ -112,3 +115,21 @@ for feature in features.keys():
     fig = px.box(df, x="label", y=feature, points="all", title=title)
     if SAVEFIGURES:
         fig.write_image("./measureData/" + str(feature) + "_box_plot.png")
+
+# Export Data to text file for further processing
+lines = []
+for label in data.keys():
+    nEle = len(data[label]["wSpan"])
+    for idx in range(nEle):
+        line = label
+        for feature in data[label].keys():
+            if feature=="wLen":
+                line += ',{},{}'.format(data[label][feature][idx], data[label][feature][nEle + idx - 1])
+            else:
+                line += ',{}'.format(data[label][feature][idx])
+        line += "\n"
+        lines.append(line)
+
+with open("./measureData/" + "data.txt",'w') as target:
+    target.writelines(lines)
+
