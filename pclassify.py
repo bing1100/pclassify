@@ -37,6 +37,11 @@ CNUM = {
 names = ["Nearest_Neighbors", "Gaussian_Process", "Decision_Tree", 
          "Random_Forest", "Neural_Net", "AdaBoost",
          "Naive_Bayes", "QDA"]
+
+nb = [798, 303, 98, 345, 1075, 456, 339, 268, 9, 1535, 0]
+s = sum(nb)
+nb = np.array(nb) / s
+
 classifiers = [
     KNeighborsClassifier(10),
     GaussianProcessClassifier(warm_start=True, multi_class='one_vs_one', n_jobs=-1),
@@ -44,7 +49,7 @@ classifiers = [
     RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
     MLPClassifier(alpha=1, max_iter=1000),
     AdaBoostClassifier(),
-    GaussianNB(),
+    GaussianNB(priors=nb),
     QuadraticDiscriminantAnalysis()
 ]
 

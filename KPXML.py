@@ -7,12 +7,26 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from paths import FILEROOT, SAVEROOT, TRAINAME, VALINAME
 
-FILEROOT = "/media/bhux/ssd/airplane/train/train"
-SAVEROOT = "./exp1/"
 SHOWFIGURES = False
 SAVEFIGURES = True
 SHOW = False
+
+CNUM = {
+    "Boeing737": 0,
+    "Boeing747": 1,
+    "Boeing777": 2,
+    "Boeing787": 3,
+    "A220": 4,
+    "A321": 5,
+    "A330": 6,
+    "A350": 7,
+    "ARJ21": 8,
+    "other": 9,
+    "invalid": 10,
+    "NA": 11
+}
 
 def i(string):
     switch = {
@@ -25,23 +39,25 @@ def i(string):
 
 class KPXML():
     def __init__(self, resFile, xmlroot, label=True):
+        self.counter = [0]*11
         self.error = []
         self.data = {
-            "Boeing737": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "Boeing747": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "Boeing777": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "Boeing787": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "A220": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "A321": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "A330": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "A350": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "ARJ21": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "other": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "invalid": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
-            "NA": {"wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "Boeing737": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "Boeing747": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "Boeing777": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "Boeing787": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "A220": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "A321": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "A330": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "A350": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "ARJ21": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "other": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "invalid": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
+            "NA": {"pArea":[], "wLen":[], "wSpan":[], "wAngle":[], "fH2C":[], "fC2T":[], "fH2T":[], "whAng":[], "whLen": [], "wtAng": [], "wtLen":[], "file": [], "idx": []},
         }
 
         self.features = {
+            "pArea":["Area of the Plane Polygon Histogram"], 
             "wLen": ["Wing Lengths Histogram"],
             "wSpan": ["Wing Spans Histogram"],
             "wAngle": ["Wing Angle Histogram"],
@@ -56,6 +72,7 @@ class KPXML():
 
         f = open(resFile, "r")
         lines = (f.read()).split("\n")
+        changes = 0
         if not label:
             lines = lines[:-1]
         
@@ -104,7 +121,7 @@ class KPXML():
                     plt.scatter(xs, ys)
                     plt.scatter(pC[0], pC[1])
 
-                kps = u.fixKeypoints(pC, kps, 10, 0.5, 5)
+                kps = u.fixKeypoints(pC, kps, 10, 0.2, 5)
                 if SHOW:
                     xs = [i[0] for i in kps]
                     ys = [i[1] for i in kps]
@@ -123,22 +140,36 @@ class KPXML():
                         ]
                         if u.within(coords, pC):
                             plabel = cand[i("gtn")][0].text
+                            self.counter[CNUM[plabel]] += 1
+                        else:
+                            self.error.append(xmlFile)
 
                 pC = kps[0]
                 pH = kps[1]
                 pT = kps[2]
                 pW1 = kps[3]
                 pW2 = kps[4]
+                changes += kps[5]
 
+                wa = u.getWingAngle(pW1, pC, pW2) 
+                wa = wa if wa < 180 else 360 - wa
+
+                wha = u.getWingAngle(pW1, pH, pW2) 
+                wha = wha if wha < 180 else 360 - wha
+
+                wta = u.getWingAngle(pW1, pT, pW2) 
+                wta = wta if wta < 180 else 360 - wta
+
+                self.data[plabel]["pArea"].append(u.getArea(kps[:-1], sRes))
                 self.data[plabel]["wLen"].extend(u.getWingLens(pW1, pC, pW2, sRes))
                 self.data[plabel]["wSpan"].append(u.getWingSpan(pW1, pW2, sRes))
-                self.data[plabel]["wAngle"].append(360 - u.getWingAngle(pW1, pC, pW2))
+                self.data[plabel]["wAngle"].append(wa)
                 self.data[plabel]["fH2C"].append(u.getH2C(pH, pC, sRes))
                 self.data[plabel]["fC2T"].append(u.getC2T(pC, pT, sRes))
                 self.data[plabel]["fH2T"].append(u.getH2T(pH, pT, sRes))
-                self.data[plabel]["whAng"].append(360 - u.getWingAngle(pW1, pH, pW2))
+                self.data[plabel]["whAng"].append(wha)
                 self.data[plabel]["whLen"].extend(u.getWingLens(pW1, pH, pW2, sRes))
-                self.data[plabel]["wtAng"].append(360 - u.getWingAngle(pW1, pT, pW2))
+                self.data[plabel]["wtAng"].append(wta)
                 self.data[plabel]["wtLen"].extend(u.getWingLens(pW1, pT, pW2, sRes))
                 self.data[plabel]["file"].append(name)
                 self.data[plabel]["idx"].append(str(idx))
@@ -147,6 +178,9 @@ class KPXML():
 
             if SHOW:
                 plt.show()
+
+        print("Counter: {}\n".format(str(self.counter)))
+        print("Ps fixed: {}\n".format(str(changes)))
 
     def createStats(self):
         for label in self.data.keys():
@@ -176,15 +210,23 @@ class KPXML():
                 if SAVEFIGURES:
                     if not os.path.exists(SAVEROOT):
                         os.mkdir(SAVEROOT)
-                        if not os.path.exists(SAVEROOT + label):
-                            os.mkdir(SAVEROOT + label)
+
+                    if not os.path.exists(SAVEROOT + label):
+                        os.mkdir(SAVEROOT + label)
+
                     fig.write_image(SAVEROOT + label + "/" + str(feature) + "_hist.png")
 
                 if SHOWFIGURES:
                     fig.show()
         
-        with open(SAVEROOT + label + "/statistics.txt",'w') as target:
-            target.writelines(lines)
+            if not os.path.exists(SAVEROOT):
+                os.mkdir(SAVEROOT)
+
+            if not os.path.exists(SAVEROOT + label):
+                os.mkdir(SAVEROOT + label)
+
+            with open(SAVEROOT + label + "/statistics.txt",'w') as target:
+                target.writelines(lines)
 
     def createBPs(self):
         for feature in self.features.keys():
@@ -230,9 +272,14 @@ class KPXML():
 if __name__ == "__main__":
     print("Loading Training Data...\n")
     tkps = KPXML("./trainres.txt", "./trainxmls/")
+    print("Creating Training Stats...\n")
     tkps.createStats()
+    print("Creating Training Box Plots...\n")
     tkps.createBPs()
-    tkps.exportData("traindata.txt")
+    print("Exporting Training Data...\n")
+    tkps.exportData(TRAINAME)
 
+    print("Loading Validation Data...\n")
     vkps = KPXML("./valres.txt", "./valxmls/", label=False)
-    vkps.exportData("valdata.txt")
+    print("Saving Validation Data...\n")
+    vkps.exportData(VALINAME)

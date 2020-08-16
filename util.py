@@ -137,6 +137,10 @@ def within(coords, candP):
     cand = Point(candP)
     return cand.within(poly)
 
+def getArea(coords, r):
+    poly = Polygon(coords)
+    return poly.area * r**2
+
 def s2n(s):
     return [float(val) for val in s.split(",")]
 
@@ -176,6 +180,41 @@ def fixKeypoints(pC, coords, wThreshold, fThreshold, aThreshold):
     cH = coords[h]
     cT = coords[t]
     cWs = [coords[ws[0]], coords[ws[1]]]
+    change = 0
+
+    # Fix short head or tail
+    hlen = length(cPC, cH)
+    tlen = length(cPC, cT)
+    diff = abs(hlen - tlen)
+
+    if hlen < (fThreshold * tlen):
+        change += 1
+        v = [
+            cH[0] - cPC[0],
+            cH[1] - cPC[1]
+        ]
+        if v[1] == 0:
+            cH[0] = cH[0] - np.sign(v[0]) * diff
+        else:
+            theta = math.atan(v[0] / v[1])
+            cH = [
+                cH[0] + diff * math.sin(theta),
+                cH[1] + diff * math.cos(theta)
+            ]
+    if tlen < (fThreshold * hlen):
+        change += 1
+        v = [
+            cT[0] - cPC[0],
+            cT[1] - cPC[1]  
+        ]
+        if v[1] == 0:
+            cT[0] = cT[0] - np.sign(v[0]) * diff
+        else: 
+            theta = math.atan(v[0] / v[1])
+            cT = [
+                cT[0] + diff * math.sin(theta),
+                cT[1] + diff * math.cos(theta)
+            ]
 
     # Fix short wings
     w1len = length(cPC, cWs[0])
@@ -183,6 +222,7 @@ def fixKeypoints(pC, coords, wThreshold, fThreshold, aThreshold):
     diff = abs(w1len - w2len)
 
     if wThreshold < diff:
+        change += 1
         i = 1
         v = [
             cWs[1][0] - pC[0],
@@ -204,24 +244,32 @@ def fixKeypoints(pC, coords, wThreshold, fThreshold, aThreshold):
             ]
     
     # Realign the plane center
-    cWp = np.array([
-        (cWs[0][0] + cWs[1][0] + cH[0])/3,
-        (cWs[0][1] + cWs[1][1] + cH[1])/3
-    ])
-    v = np.array([
-         (cWs[0][1] - cWs[1][1]),
-        -(cWs[0][0] - cWs[1][0])
-    ])
-    u = np.array([
-        pC[0] - cWp[0],
-        pC[1] - cWp[1]
-    ])
-    shift = proj(u, v)
-    cPC = [cWp[0] + shift[0], cWp[1] + shift[1]]
+    change += 1
+    # cWp = np.array([
+    #     (cWs[0][0] + cWs[1][0] + cH[0] + cPC[0])/4,
+    #     (cWs[0][1] + cWs[1][1] + cH[1] + cPC[1])/4
+    # ])
+    # v = np.array([
+    #      (cWs[0][1] - cWs[1][1]),
+    #     -(cWs[0][0] - cWs[1][0])
+    # ])
+    # u = np.array([
+    #     pC[0] - cWp[0],
+    #     pC[1] - cWp[1]
+    # ])
+    # shift = proj(u, v)
+    # cPC = [cWp[0] + shift[0], cWp[1] + shift[1]]
+    # cPC = [cWp[0], cWp[1]]
+
+    cPC = [
+        (cWs[0][0] + cWs[1][0] + cH[0] + cPC[0])/4,
+        (cWs[0][1] + cWs[1][1] + cH[1] + cPC[1])/4
+    ]
 
     # Fix the tail angle to plane center and head
     angle = getWingAngle(cH, cPC, cT)
     if aThreshold < abs(180 - angle):
+        change += 1
         v = np.array([
             cH[0] - cPC[0],
             cH[1] - cPC[1] 
@@ -234,37 +282,5 @@ def fixKeypoints(pC, coords, wThreshold, fThreshold, aThreshold):
         shift = proj(u, v)
         cT = [cPC[0] + shift[0], cPC[1] + shift[1]]
 
-    # Fix short head or tail
-    hlen = length(cPC, cH)
-    tlen = length(cPC, cT)
-    diff = abs(hlen - tlen)
-
-    if hlen < (fThreshold * tlen):
-        v = [
-            cH[0] - cPC[0],
-            cH[1] - cPC[1]
-        ]
-        if v[1] == 0:
-            cH[0] = cH[0] - np.sign(v[0]) * diff
-        else:
-            theta = math.atan(v[0] / v[1])
-            cH = [
-                cH[0] + diff * math.sin(theta),
-                cH[1] + diff * math.cos(theta)
-            ]
-    if tlen < (fThreshold * hlen):
-        v = [
-            cT[0] - cPC[0],
-            cT[1] - cPC[1]  
-        ]
-        if v[1] == 0:
-            cT[0] = cT[0] - np.sign(v[0]) * diff
-        else: 
-            theta = math.atan(v[0] / v[1])
-            cT = [
-                cT[0] + diff * math.sin(theta),
-                cT[1] + diff * math.cos(theta)
-            ]
-        
-    return [cPC, cH, cT, cWs[0], cWs[1]]
+    return [cPC, cH, cT, cWs[0], cWs[1], change]
 
