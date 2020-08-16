@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from sklearn import preprocessing
+from sklearn.model_selection import cross_validate
 from sklearn.experimental import enable_hist_gradient_boosting
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -21,18 +22,18 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.ensemble import VotingClassifier
 from p_tqdm import p_map
 from progress.bar import Bar
 from pathos.multiprocessing import ProcessingPool as Pool
 from paths import SAVEROOT, TRAINAME, VALINAME
 
 # General Parameters
-TEST = True
-PREDICT = False
-TESTINGDONE = [0,1,1,0,1,1,1,0,0,0,1,0]
-CLASSIFIERSUSED = [0,0,0,0,0,1,1,0,0,0,1,0]
-NUMPROCESS = 8
-TESTSIZE = 0.2
+TEST = False
+PREDICT = True
+TESTINGDONE = [0,1,1,0,1,1,1,0,0,0,1,0,1]
+CLASSIFIERSUSED = [0,0,0,0,0,1,1,0,0,0,1,0,1]
+NUMPROCESS = 4
 ITER = 20
 
 CNUM = {
@@ -65,13 +66,11 @@ NUMC = {
     11: "NA"
 }
 
-counter = [0]*11
-
 # classifier Parameters
 names = [
     "Nearest_Neighbors",
-    "Linear SVM", 
-    "RBF SVM",
+    "Linear_SVM", 
+    "RBF_SVM",
     "Gaussian_Process_1v1", 
     "Decision_Tree", 
     "Random_Forest", 
@@ -79,8 +78,9 @@ names = [
     "AdaBoost",
     "Naive_Bayes", 
     "QDA", 
-    "Gradient Boosting", 
-    "Gaussian_Process_1vrest", 
+    "Gradient_Boosting", 
+    "Gaussian_Process_1vrest",
+    "Soft_Voting"
 ]
 
 nb = [798, 303, 98, 345, 1075, 456, 339, 268, 9, 1535, 0]
@@ -90,24 +90,32 @@ nb = np.array(sorted(nb, reverse=True)) / s
 cused = sum(CLASSIFIERSUSED)
 
 classifiers = [
-    KNeighborsClassifier(10, weights="distance", n_jobs=-1),
-    SVC(kernel="linear", C=0.025),
-    SVC(gamma=2, C=1),
-    GaussianProcessClassifier(multi_class='one_vs_one', n_jobs=-1),
-    DecisionTreeClassifier(max_depth=5),
-    RandomForestClassifier(max_depth=5, n_jobs=-1),
+    KNeighborsClassifier(10, weights="distance", n_jobs=NUMPROCESS),
+    SVC(kernel="linear"),
+    SVC(),
+    GaussianProcessClassifier(multi_class='one_vs_one', n_jobs=NUMPROCESS),
+    DecisionTreeClassifier(max_depth=6),
+    RandomForestClassifier(max_depth=6, n_jobs=NUMPROCESS),
     MLPClassifier(hidden_layer_sizes=(100, 50, 25, 12, 25, 50, 100), solver='sgd', learning_rate="adaptive", max_iter=1000, n_iter_no_change=True),
     AdaBoostClassifier(n_estimators=200),
     GaussianNB(priors=nb),
     QuadraticDiscriminantAnalysis(priors=nb),
-    GradientBoostingClassifier(max_depth=1, n_estimators=300),
-    GaussianProcessClassifier(n_jobs=-1),
+    GradientBoostingClassifier(max_depth=1, n_estimators=500, learning_rate=0.1),
+    GaussianProcessClassifier(n_jobs=NUMPROCESS),
 ]
+
+classifiers.append(
+    VotingClassifier(
+        estimators=[(names[idx], classifiers[idx]) for idx in [i for i, x in enumerate(CLASSIFIERSUSED[:-1]) if x == max(CLASSIFIERSUSED[:-1])]],
+        voting='soft',
+        n_jobs=NUMPROCESS
+    )
+)
 
 # Load Train data
 f = open(SAVEROOT + TRAINAME, 'r')
 lines = (f.read()).split("\n")
-
+from sklearn.model_selection import cross_validate
 features, labels = [], []
 for line in lines[:-1]:
     segments = line.split(",")[:-2]
@@ -123,40 +131,32 @@ if TEST:
     def runClassifier(idx):
         name, clf = names[idx], classifiers[idx]
         if TESTINGDONE[idx] == 1:
-            clf.fit(fTrain, lTrain)
-            trainScore = clf.score(fTrain, lTrain)
-            testScore = clf.score(fTest, lTest)
-            line = '-----------\n{}\nTraining Acc: {}\nTesting Acc: {}\n'.format(name, trainScore, testScore)
-            return [name, trainScore, testScore, line]
-        return [name, -1, -1, "N/A\n"]
+            cv_results = cross_validate(clf, features, labels, cv=ITER, return_train_score=True, n_jobs=-1)
+            return [name, cv_results]
+        return [name, -1]
 
     res = {}
     lines = []
 
-    bar = Bar("Testing Phase", max=ITER)
-    for i in range(ITER):
-        p = Pool(NUMPROCESS)
-        data = p.map(runClassifier, list(range(len(names))))
+    p = Pool(NUMPROCESS)
+    scores = p_map(runClassifier, list(range(len(names))))
 
-        for i in data:
-            k = i[0]
-            trScore = i[1]
-            tScore = i[2]
-            line = i[3]
+    for score in scores:
+        n = score[0]
+        r = score[1]
 
-            if k not in res.keys():
-                res[k] = [trScore, tScore]
-            else:
-                res[k][0] += trScore
-                res[k][1] += tScore
+        line = '-----------\n{}\n'.format(n)
+        if r != -1:
+            trScore = r["train_score"]
+            line += "Train Scores\n"
+            line += 'Scores: {}\n'.format(trScore)
+            line += "Accuracy: %0.2f (+/- %0.2f)\n" % (trScore.mean(), trScore.std())
 
-            lines.append(line)
-
-        bar.next()
-    bar.finish()
-
-    for k in res.keys():
-        lines.append('-----------\n{}\nAveraged Training Acc: {}\n Averaged Testing Acc: {}\n'.format(k, res[k][0]/ITER, res[k][1]/ITER))
+            tScore = r["test_score"]
+            line += "Train Scores\n"
+            line += 'Scores: {}\n'.format(tScore)
+            line += "Accuracy: %0.2f (+/- %0.2f)\n" % (tScore.mean(), tScore.std())
+        lines.append(line)
 
     with open(SAVEROOT + "pclassify_results.txt",'w') as target:
         target.writelines(lines)
@@ -166,74 +166,77 @@ if PREDICT:
     f = open(SAVEROOT + VALINAME, 'r')
     lines = (f.read()).split("\n")
 
-    vFeatures, vLabels = [], []
+    vFeatures, vLocations = [], []
     for line in lines[:-1]:
         segments = line.split(",")
         feature = [float(val) for val in segments[1:-2]]
         vFeatures.append(feature)
-        vLabels.append([segments[-2], segments[-1]])
+        vLocations.append([segments[-2], segments[-1]])
 
     def createPredictions(idx):
         if CLASSIFIERSUSED[idx] == 1:
             clf = classifiers[idx]
             clf.fit(features, labels)
-            if names[idx] != "Gaussian_Process_1v1":
-                return clf.predict_proba(vFeatures)
-            else:
-                pred = clf.predict(vFeatures)
-                pred = pred.reshape(len(pred), 1)
-                enc = preprocessing.OneHotEncoder(sparse=False)
-                onehotlabels = enc.fit_transform(pred)
-                return onehotlabels
+            pred = clf.predict(vFeatures)
+            
+            return pred
         return []
 
     print("Prediction Phase\n")
     p = Pool(NUMPROCESS)
     probs = p_map(createPredictions, list(range(len(names))))
 
-    data = {}
-    i = 0
-    invCount = 0
-    for label in vLabels:
-        d = np.array([0.0] * 11)
-        for cprob in probs:
-            if len(cprob) != 0:
-                d += cprob[i]
+    m = [i for i, x in enumerate(CLASSIFIERSUSED) if x == max(CLASSIFIERSUSED)]
+    idx = 0
+    stats = []
+    for prob in probs:
+        if len(prob) == 0:
+            continue
+        algo = names[m[idx]]
+        line = "----------------------------\n"
+        line += algo + "\n"
 
-        # maxIdx = np.argwhere(d > cused * 0.50)
-        # if maxIdx.size != 0:
-        #     maxIdx = maxIdx = maxIdx[0][0]
-        # else:
-        #     maxIdx = np.argmax(d)
+        counter = [0]*11
+        data = {}
+        invCount = 0
 
-        maxIdx = np.argmax(d)
-
-        counter[maxIdx] += 1
-        lStr = NUMC[maxIdx]
-        if maxIdx < 10:
-            if label[0] in data.keys():
-                data[label[0]].append((label[1], lStr))
+        i = 0
+        for loc in vLocations:
+            c = prob[i]
+            lStr = NUMC[c]
+            counter[c] += 1
+            if c < 10:
+                if loc[0] in data.keys():
+                    data[loc[0]].append((loc[1], lStr))
+                else:
+                    data[loc[0]] = [(loc[1], lStr)]
             else:
-                data[label[0]] = [(label[1], lStr)]
-        else:
-            invCount += 1
-        i += 1
-    
-    print("Invalid Cases Removed: ", invCount, "\n")
-    print("Class Counter: ", counter, "\n")
-
-    print("Generating Results\n")
-    for key in range(1, 1001):
-        lines = []
-        if str(key) in data.keys():
-            for obj in data[str(key)]:
-                lines.append("{},{}\n".format(obj[0], obj[1]))
-
-        if not os.path.exists(SAVEROOT + "results/"):
-            os.mkdir(SAVEROOT + "results/")
+                invCount += 1
+            i += 1
         
-        with open(SAVEROOT + "results/" + str(key) + ".txt",'w') as target:
-            target.writelines(lines)
+        line += "Invalid Cases Removed: " + str(invCount) + "\n"
+        line += "Class Counter: " + str(counter) + "\n"
+
+        print(line)
+        stats.append(line)
+        
+        print("Generating Results\n")
+        for key in range(1, 1001):
+            lines = []
+            if str(key) in data.keys():
+                for obj in data[str(key)]:
+                    lines.append("{},{}\n".format(obj[0], obj[1]))
+
+            if not os.path.exists(SAVEROOT + "results_" + algo + "/"):
+                os.mkdir(SAVEROOT + "results_" + algo + "/")
+            
+            with open(SAVEROOT + "results_" + algo + "/" + str(key) + ".txt",'w') as target:
+                target.writelines(lines)
+        
+        idx += 1
+
+    with open(SAVEROOT + "prediction_stats.txt",'w') as target:
+        target.writelines(stats)
 
     print("Completed!\n")
 
