@@ -1,0 +1,4 @@
+1,Boeing737
+3,ARJ21
+0,other
+2,other

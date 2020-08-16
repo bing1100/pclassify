@@ -1,0 +1,6 @@
+3,Boeing737
+5,Boeing787
+0,A321
+1,A321
+2,A321
+4,other

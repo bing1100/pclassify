@@ -42,7 +42,7 @@ for name in lines[:-1]:
 
     # Split each line in keypoints file
     kps = [line.split(",") for line in lines[:-1]]
-    for kp in kps:
+    for kp in kps[:10]:
         xs = [int(float(i)) for i in kp[2::2]]
         ys = [int(float(i)) for i in kp[3::2]]
 
@@ -78,8 +78,8 @@ for name in lines[:-1]:
             u.intersection(le[1], se[1]))
 
         # Show the raw vertices without epsilon
-        if SHOW:
-            plt.scatter(np.array(v)[:,0], np.array(v)[:,1])
+        # if SHOW:
+        #     plt.scatter(np.array(v)[:,0], np.array(v)[:,1])
 
         # Calculate the diagonal lines of the bounding box
         diags = (u.line(v[0], v[3]), u.line(v[1], v[2]))

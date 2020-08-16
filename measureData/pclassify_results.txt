@@ -12,15 +12,15 @@ Training Acc: 0.8977812995245642
 Testing Acc: 0.9001782531194296
 -----------
 Random_Forest
-Training Acc: 0.9007527733755943
-Testing Acc: 0.8859180035650623
+Training Acc: 0.8910459587955626
+Testing Acc: 0.8823529411764706
 -----------
 Neural_Net
-Training Acc: 0.8791600633914421
-Testing Acc: 0.8698752228163993
+Training Acc: 0.8785657686212361
+Testing Acc: 0.875222816399287
 -----------
 AdaBoost
-Training Acc: 0.6386687797147385
+Training Acc: 0.6388668779714739
 Testing Acc: 0.6399286987522281
 -----------
 Naive_Bayes

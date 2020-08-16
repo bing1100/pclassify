@@ -1,0 +1,13 @@
+12,Boeing777
+11,A330
+0,A350
+3,A350
+5,A350
+8,A350
+9,A350
+10,A350
+1,other
+2,other
+4,other
+6,other
+7,other

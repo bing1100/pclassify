@@ -1,5 +1,7 @@
 from __future__ import division 
 import math
+from shapely.geometry import Point, Polygon
+import numpy as np
 
 # Lines (L*) are defined in the form Ax + By = C
 # Points (p*) are defined in the tuple format (x, y)
@@ -130,4 +132,139 @@ def getC2T(pC, pT, r):
 def getH2T(pH, pT, r):
     return length(pH, pT) * r
 
+def within(coords, candP):
+    poly = Polygon(coords)
+    cand = Point(candP)
+    return cand.within(poly)
+
+def s2n(s):
+    return [float(val) for val in s.split(",")]
+
+def proj(u, v):  
+    return (np.dot(u, v) / np.dot(v, v) ) * v 
+
+def findOrientation(pC, coords):
+    diff = 180
+    pos = [-1, -1]
+
+    for i in range(4):
+        for j in range(i+1, 4):
+            ang = getWingAngle(coords[i], pC, coords[j])
+            if abs(180 - ang) < diff:
+                diff = abs(180 - ang)
+                pos = [i, j]
+
+    ws = [item for item in list(range(4)) if item not in pos]
+
+    h = pos[0]
+    t = pos[1]
+
+    poly = [
+        coords[pos[1]],
+        coords[ws[0]],
+        coords[ws[1]]
+    ]
+    if within(poly, pC):
+        h = pos[1]
+        t = pos[0]
+
+    return h, t, ws
+
+def fixKeypoints(pC, coords, wThreshold, fThreshold, aThreshold):
+    h, t, ws = findOrientation(pC, coords)
+    cPC = pC
+    cH = coords[h]
+    cT = coords[t]
+    cWs = [coords[ws[0]], coords[ws[1]]]
+
+    # Fix short wings
+    w1len = length(cPC, cWs[0])
+    w2len = length(cPC, cWs[1])
+    diff = abs(w1len - w2len)
+
+    if wThreshold < diff:
+        i = 1
+        v = [
+            cWs[1][0] - pC[0],
+            cWs[1][1] - pC[1]
+        ]
+        if w1len < w2len:
+            i = 0
+            v = [
+                cWs[0][0] - pC[0],
+                cWs[0][1] - pC[1]
+            ]
+        if v[1] == 0:
+            cWs[i][0] = cWs[i][0] + np.sign(v[0]) * diff
+        else:
+            theta = math.atan(v[0] / v[1])
+            cWs[i] = [
+                cWs[i][0] + diff * math.sin(theta),
+                cWs[i][1] + diff * math.cos(theta)
+            ]
+    
+    # Realign the plane center
+    cWp = np.array([
+        (cWs[0][0] + cWs[1][0] + cH[0])/3,
+        (cWs[0][1] + cWs[1][1] + cH[1])/3
+    ])
+    v = np.array([
+         (cWs[0][1] - cWs[1][1]),
+        -(cWs[0][0] - cWs[1][0])
+    ])
+    u = np.array([
+        pC[0] - cWp[0],
+        pC[1] - cWp[1]
+    ])
+    shift = proj(u, v)
+    cPC = [cWp[0] + shift[0], cWp[1] + shift[1]]
+
+    # Fix the tail angle to plane center and head
+    angle = getWingAngle(cH, cPC, cT)
+    if aThreshold < abs(180 - angle):
+        v = np.array([
+            cH[0] - cPC[0],
+            cH[1] - cPC[1] 
+        ])
+        u = np.array([
+            cT[0] - cPC[0],
+            cT[1] - cPC[1]
+        ])
+
+        shift = proj(u, v)
+        cT = [cPC[0] + shift[0], cPC[1] + shift[1]]
+
+    # Fix short head or tail
+    hlen = length(cPC, cH)
+    tlen = length(cPC, cT)
+    diff = abs(hlen - tlen)
+
+    if hlen < (fThreshold * tlen):
+        v = [
+            cH[0] - cPC[0],
+            cH[1] - cPC[1]
+        ]
+        if v[1] == 0:
+            cH[0] = cH[0] - np.sign(v[0]) * diff
+        else:
+            theta = math.atan(v[0] / v[1])
+            cH = [
+                cH[0] + diff * math.sin(theta),
+                cH[1] + diff * math.cos(theta)
+            ]
+    if tlen < (fThreshold * hlen):
+        v = [
+            cT[0] - cPC[0],
+            cT[1] - cPC[1]  
+        ]
+        if v[1] == 0:
+            cT[0] = cT[0] - np.sign(v[0]) * diff
+        else: 
+            theta = math.atan(v[0] / v[1])
+            cT = [
+                cT[0] + diff * math.sin(theta),
+                cT[1] + diff * math.cos(theta)
+            ]
+        
+    return [cPC, cH, cT, cWs[0], cWs[1]]
 

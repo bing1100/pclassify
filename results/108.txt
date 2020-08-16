@@ -1,0 +1,8 @@
+1,A220
+2,A220
+6,A220
+7,A220
+0,other
+3,other
+4,other
+5,other

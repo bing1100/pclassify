@@ -1,0 +1,9 @@
+2,Boeing737
+5,Boeing747
+6,Boeing787
+8,Boeing787
+3,A220
+7,A220
+1,A321
+0,other
+4,other
