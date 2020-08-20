@@ -29,9 +29,9 @@ from pathos.multiprocessing import ProcessingPool as Pool
 from paths import SAVEROOT, TRAINAME, VALINAME
 
 # General Parameters
-TEST = False
-PREDICT = True
-TESTINGDONE = [0,1,1,0,1,1,1,0,0,0,1,0,1]
+TEST = True
+PREDICT = False
+TESTINGDONE = [1,1,1,1,1,1,1,1,1,1,1,1,0]
 CLASSIFIERSUSED = [0,0,0,0,0,1,1,0,0,0,1,0,1]
 NUMPROCESS = 4
 ITER = 20
@@ -124,14 +124,11 @@ for line in lines[:-1]:
     features.append(feature)
 
 if TEST:
-    # Create the training and testing set from the data
-    fTrain, fTest, lTrain, lTest = train_test_split(features, labels, stratify=labels, test_size=TESTSIZE)
-
     # Generate how well the model trains 
     def runClassifier(idx):
         name, clf = names[idx], classifiers[idx]
         if TESTINGDONE[idx] == 1:
-            cv_results = cross_validate(clf, features, labels, cv=ITER, return_train_score=True, n_jobs=-1)
+            cv_results = cross_validate(clf, features, labels, cv=ITER, return_train_score=True, n_jobs=NUMPROCESS)
             return [name, cv_results]
         return [name, -1]
 

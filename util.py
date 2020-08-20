@@ -59,7 +59,7 @@ def intersection(L1, L2):
     if D != 0:
         x = Dx / D
         y = Dy / D
-        return x,y
+        return [x,y]
     else:
         return False
 
@@ -117,6 +117,9 @@ def getWingAngle(pW1, pC, pW2):
     ang = math.degrees(math.atan2(pW2[1] - pC[1], pW2[0] - pC[0]) - math.atan2(pW1[1] - pC[1], pW1[0] - pC[0]))
     return ang + 360 if ang < 0 else ang
 
+def dist2line(l1, l2, p3):
+    return np.abs(np.cross(l2-l1, l1-p3)) / np.linalg.norm(l2-l1)
+
 def getWingLens(pW1, pC, pW2, r):
     return length(pW1, pC) * r, length(pW2, pC) * r
 
@@ -146,6 +149,58 @@ def s2n(s):
 
 def proj(u, v):  
     return (np.dot(u, v) / np.dot(v, v) ) * v 
+
+def idLine(l1, l2, ps, num):
+    cand = [-1,-1] * num
+
+    for i in range(len(ps)):
+        p = ps[i]
+        l = dist2line(l1, l2, p)
+        
+        for ci in range(0, num+1, 2):
+            if cand[ci + 1] == -1:
+                cand[ci] = i
+                cand[ci + 1] = l
+                
+            if l < cand[ci + 1]:
+                ti = cand[ci]
+                tl = cand[ci + 1]
+                
+                cand[ci] = i
+                cand[ci + 1] = l
+                
+                i = ti
+                l = tl
+            
+    return cand[::2]
+
+def idPoint(p1, ps, num):
+    cand = [-1,-1] * num
+    
+    for i in range(len(ps)):
+        p = ps[i]
+        p = (p[1], p[0])
+        l = length(p1, p)
+        
+        for ci in range(0, num+1, 2):
+            if cand[ci + 1] == -1:
+                cand[ci] = i
+                cand[ci + 1] = l
+                
+            if l < cand[ci + 1]:
+                ti = cand[ci]
+                tl = cand[ci + 1]
+                
+                cand[ci] = i
+                cand[ci + 1] = l
+                
+                i = ti
+                l = tl
+    
+    if cand[0] != -1:
+        return cand[::2]
+    
+    return False
 
 def findOrientation(pC, coords):
     diff = 180
