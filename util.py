@@ -108,7 +108,7 @@ def bucketCount(buckets, value, size):
     buckets[idx] += 1
     return buckets
 
-def getWingAngle(pW1, pC, pW2):
+def getAngle(pW1, pC, pW2):
     """
     Get the Angle created by 3 points
     :param p1, p2, p3: three tuples representing 3 points
@@ -179,7 +179,6 @@ def idPoint(p1, ps, num):
     
     for i in range(len(ps)):
         p = ps[i]
-        p = (p[1], p[0])
         l = length(p1, p)
         
         for ci in range(0, num+1, 2):
@@ -196,37 +195,66 @@ def idPoint(p1, ps, num):
                 
                 i = ti
                 l = tl
+    return [ps[i] for i in cand[::2]]
     
-    if cand[0] != -1:
-        return cand[::2]
+def getProjPoint(pivot, locked, var):
+    x = np.array([
+        locked[0] - pivot[0],
+        locked[1] - pivot[1]
+    ])
+    y = np.array([
+        var[0] - pivot[0],
+        var[1] - pivot[1]
+    ])
     
-    return False
+    shift = proj(y, x)
+    return np.array([pivot[0] + shift[0], pivot[1] + shift[1]])
+
+def fixMaskPoint(mask, p):
+    cand = u.idPoint(p, mask, 1)
+    cand = mask[cand[0]]
+    return np.array((p[0] + cand[0])/2, (p[1] + cand[1])/2)
 
 def findOrientation(pC, coords):
+    ls = [[length(coords[i], coords[j]) for i in range(4)] for j in range(4)]
+    matches = np.argmax(ls, axis=1)
+
+    # Find based on angle
     diff = 180
-    pos = [-1, -1]
-
+    ht = [-1, -1]
     for i in range(4):
-        for j in range(i+1, 4):
-            ang = getWingAngle(coords[i], pC, coords[j])
-            if abs(180 - ang) < diff:
-                diff = abs(180 - ang)
-                pos = [i, j]
-
-    ws = [item for item in list(range(4)) if item not in pos]
-
-    h = pos[0]
-    t = pos[1]
-
+        j = matches[i]
+        ang = getAngle(coords[i], pC, coords[j])
+        if abs(180 - ang) < diff:
+            diff = abs(180 - ang)
+            ht = [i, j]
+    ws = np.array([coords[i] for i in list(range(4)) if i not in ht])
+    ht = np.array([coords[i] for i in ht])
+    
+    # Verify and swap if needed
+    dh2t = abs(length(ht[0], pC) - length(ht[1], pC))
+    dw2w = abs(length(ws[0], pC) - length(ws[1], pC))
+    if dh2t < dw2w:
+        temp = ht
+        ht = ws
+        ws = temp
+    
+    h = ht[0]
+    t = ht[1]
+    
     poly = [
-        coords[pos[1]],
-        coords[ws[0]],
-        coords[ws[1]]
+        ht[1],
+        ws[0],
+        ws[1]
     ]
     if within(poly, pC):
-        h = pos[1]
-        t = pos[0]
+        h = ht[1]
+        t = ht[0]
 
+    # Swap for preferred orientation
+    if length(t, ws[1]) < length(t, ws[0]):
+        ws = np.array([ws[1], ws[0]])
+        
     return h, t, ws
 
 def fixKeypoints(pC, coords, wThreshold, fThreshold, aThreshold):
@@ -322,7 +350,7 @@ def fixKeypoints(pC, coords, wThreshold, fThreshold, aThreshold):
     ]
 
     # Fix the tail angle to plane center and head
-    angle = getWingAngle(cH, cPC, cT)
+    angle = getAngle(cH, cPC, cT)
     if aThreshold < abs(180 - angle):
         change += 1
         v = np.array([

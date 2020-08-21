@@ -66,7 +66,7 @@ for line in lines:
 
         data[label]["wLen"].extend(u.getWingLens(pW1, pC, pW2, sRes))
         data[label]["wSpan"].append(u.getWingSpan(pW1, pW2, sRes))
-        data[label]["wAngle"].append(360 - u.getWingAngle(pW1, pC, pW2))
+        data[label]["wAngle"].append(360 - u.getAngle(pW1, pC, pW2))
         data[label]["fH2C"].append(u.getH2C(pH, pC, sRes))
         data[label]["fC2T"].append(u.getC2T(pC, pT, sRes))
         data[label]["fH2T"].append(u.getH2T(pH, pT, sRes))

@@ -151,13 +151,13 @@ class KPXML():
                 pW2 = kps[4]
                 changes += kps[5]
 
-                wa = u.getWingAngle(pW1, pC, pW2) 
+                wa = u.getAngle(pW1, pC, pW2) 
                 wa = wa if wa < 180 else 360 - wa
 
-                wha = u.getWingAngle(pW1, pH, pW2) 
+                wha = u.getAngle(pW1, pH, pW2) 
                 wha = wha if wha < 180 else 360 - wha
 
-                wta = u.getWingAngle(pW1, pT, pW2) 
+                wta = u.getAngle(pW1, pT, pW2) 
                 wta = wta if wta < 180 else 360 - wta
 
                 self.data[plabel]["pArea"].append(u.getArea(kps[:-1], sRes))
