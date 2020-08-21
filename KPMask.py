@@ -113,16 +113,6 @@ def get_endpoints_junction(mask_skeleton):
 
     return np.array(endpoints), np.array(junctions)
 
-def tailSide(ps, i, j, cand):
-    x, y = [c for c in range(4) if c not in [i, j]]
-    l = [[u.length(ps[r], ps[t]) for r in [x, y]] for t in [i, j]]
-    idx = np.argmax(l, axis=1)
-    idx = np.argmin([l[0][idx[0]], l[1][idx[1]]])
-    
-    wing = [i,j][idx]
-    
-    return wing
-
 def findKps(convex, mask, mcenter):
     bounds = mask.shape
     origin = np.array((0, convex.shape[1]))
@@ -137,10 +127,10 @@ def findKps(convex, mask, mcenter):
     tested_angles = np.linspace(-np.pi / 2, np.pi / 2, 90)
     edges = feature.canny(convex, sigma=0.01)
     h, theta, d = hough_line(edges, theta=tested_angles)
-    hough = hough_line_peaks(h, theta, d, min_angle=25, num_peaks=4)
+    hough = hough_line_peaks(h, theta, d, min_angle=50, min_distance=10, num_peaks=4)
 
     # Get the skeleton keypoints
-    kpskel = corner_peaks(corner_harris(skeleton, k=0), min_distance=10, threshold_rel=0)
+    kpskel = corner_peaks(corner_harris(skeleton, k=0), min_distance=3, threshold_rel=0)
     kpskel = np.flip(kpskel)
     
     kps = []
@@ -167,7 +157,9 @@ def findKps(convex, mask, mcenter):
 
     # Filter through whether to choose intersections or kpmask corners
     thresh = s / len(inters)
+    print(len(inters))
     res = [kps[i] if thresh < u.length(kps[i], inters[i]) else inters[i] for i in range(4)]
+    print(cp.shape)
     h, t, ws = u.findOrientation(cp[0], res)
     
     cand = u.idPoint(h, kpskel, 1)
@@ -180,16 +172,19 @@ def findKps(convex, mask, mcenter):
     ]
     
     # Find the tail center using geometry
-    ctp = u.getProjPoint(mcenter, h, t)
-    cand = u.idPoint(ctp, kpskel, 1)
+    ct = u.getProjPoint(mcenter, h, t)
+    cand = u.idPoint(ct, kpskel, 1)
     ctp = u.getProjPoint(cand[0], h, t)
     shift = [ctp[0] - t[0], ctp[1] - t[1]]
     t2 = np.array([ctp[0] + shift[0], ctp[1] + shift[1]])
-    ct = np.array([t, ctp, t2])
+    ts = np.array([t, cand[0], t2])
     
     res = np.array(res)
     fig, ax = plt.subplots(nrows=1, ncols=4, figsize=(8, 3), sharex=True, sharey=True)
-    ax[0].imshow(convex, cmap=plt.cm.gray)
+    ax[0].imshow(edges, cmap=plt.cm.gray)
+    for _, angle, dist in zip(*hough):
+        y0, y1 = (dist - origin * np.cos(angle)) / np.sin(angle)
+        ax[0].plot(origin, (y0, y1), '-r')
     ax[0].plot(kpmask[:, 0], kpmask[:, 1], color='cyan', marker='1', linestyle='None', markersize=3)
     ax[0].plot(res[:, 0], res[:, 1], color='red', marker='o', linestyle='None', markersize=6)
     ax[0].axis('off')
@@ -197,7 +192,6 @@ def findKps(convex, mask, mcenter):
     
     ax[1].imshow(mask, cmap=plt.cm.gray)
     ax[1].plot(res[:, 0], res[:, 1], color='cyan', marker='o', linestyle='None', markersize=6)
-    ax[1].plot(res[-1, 0], res[-1, 1], color='red', marker='o', linestyle='None', markersize=6)
     ax[1].axis('off')
     ax[1].set_title('convex', fontsize=20)
     
@@ -210,7 +204,8 @@ def findKps(convex, mask, mcenter):
     
     ax[3].imshow(mask, cmap=plt.cm.gray)
     ax[3].plot(h[0], h[1], color='blue', marker='o', linestyle='None', markersize=6)
-    ax[3].plot(ct[:, 0], ct[:, 1], color='red', marker='o', linestyle='None', markersize=6)
+    ax[3].plot(ct[0], ct[1], color='blue', marker='o', linestyle='None', markersize=6)
+    ax[3].plot(ts[:, 0], ts[:, 1], color='red', marker='o', linestyle='None', markersize=6)
     ax[3].plot(cp[0], cp[1], color='cyan', marker='o', linestyle='None', markersize=6)
     ax[3].plot(ws[:, 0], ws[:, 1], color='pink', marker='o', linestyle='None', markersize=6)
     ax[3].plot(kpskel[:, 0], kpskel[:, 1], color='black', marker='1', linestyle='None', markersize=6)
@@ -220,7 +215,7 @@ def findKps(convex, mask, mcenter):
     plt.tight_layout()
     plt.show()
     
-    return np.array(res)
+    return h, ws, ct, ts, cp
 
 class KPMask():
     def __init__(self, resFile, labeled=True):
@@ -230,7 +225,7 @@ class KPMask():
         if not labeled:
             lines = lines[:-1]
         
-        for line in lines[:1]:
+        for line in lines[:20]:
             name = ((line.split(","))[0].split("."))[0]
             sRes = float((line.split(","))[1])
             
@@ -255,9 +250,7 @@ class KPMask():
                 mcenter = region.local_centroid
                 mcenter = np.array((mcenter[1] + 2*padY, mcenter[0] + 2*padX))
 
-                outerKPs = findKps(convex, mask, mcenter)
-                
-                
+                h, ws, ct, ts, cp = findKps(convex, mask, mcenter)
 
 if __name__ == "__main__":
     print("Loading Training Data...\n")
