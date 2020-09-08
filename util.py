@@ -159,43 +159,28 @@ def idLine(l1, l2, ps, num):
         
         for ci in range(0, num+1, 2):
             if cand[ci + 1] == -1:
-                cand[ci] = i
-                cand[ci + 1] = l
+                cand[ci], cand[ci+1] = i, l
                 
             if l < cand[ci + 1]:
-                ti = cand[ci]
-                tl = cand[ci + 1]
-                
-                cand[ci] = i
-                cand[ci + 1] = l
-                
-                i = ti
-                l = tl
+                cand[ci], cand[ci+1], i, l = i, l, cand[ci], cand[ci+1]
             
     return cand[::2]
 
-def idPoint(p1, ps, num):
-    cand = [-1,-1] * num
+def idPoint(p1, ps, num=1):
+    cand = [-1, -1, -1] * num
     
     for i in range(len(ps)):
         p = ps[i]
         l = length(p1, p)
         
-        for ci in range(0, num+1, 2):
-            if cand[ci + 1] == -1:
-                cand[ci] = i
-                cand[ci + 1] = l
+        for ci in range(0, num+1, 3):
+            if cand[ci + 2] == -1:
+                cand[ci], cand[ci+1], cand[ci+2] = p, i, l
                 
-            if l < cand[ci + 1]:
-                ti = cand[ci]
-                tl = cand[ci + 1]
+            if l < cand[ci + 2]:
+                cand[ci], cand[ci+1], cand[ci+2], p, i, l = p, i, l, cand[ci], cand[ci+1], cand[ci+2]
                 
-                cand[ci] = i
-                cand[ci + 1] = l
-                
-                i = ti
-                l = tl
-    return [ps[i] for i in cand[::2]]
+    return np.array(cand)
     
 def getProjPoint(pivot, locked, var):
     x = np.array([
@@ -211,7 +196,7 @@ def getProjPoint(pivot, locked, var):
     return np.array([pivot[0] + shift[0], pivot[1] + shift[1]])
 
 def fixMaskPoint(mask, p):
-    cand = u.idPoint(p, mask, 1)
+    cand = idPoint(p, mask, 1)
     cand = mask[cand[0]]
     return np.array((p[0] + cand[0])/2, (p[1] + cand[1])/2)
 
@@ -232,12 +217,12 @@ def findOrientation(pC, coords):
     ht = np.array([coords[i] for i in ht])
     
     # Verify and swap if needed
-    dh2t = abs(length(ht[0], pC) - length(ht[1], pC))
-    dw2w = abs(length(ws[0], pC) - length(ws[1], pC))
-    if dh2t < dw2w:
-        temp = ht
-        ht = ws
-        ws = temp
+    # dh2t = abs(length(ht[0], pC) - length(ht[1], pC))
+    # dw2w = abs(length(ws[0], pC) - length(ws[1], pC))
+    # if dh2t < dw2w:
+    #     temp = ht
+    #     ht = ws
+    #     ws = temp
     
     h = ht[0]
     t = ht[1]
