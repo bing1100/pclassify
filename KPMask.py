@@ -364,7 +364,7 @@ def solveLine(line, data, labeled):
                     u.s2n(cand[i("gtb")][2].text),
                     u.s2n(cand[i("gtb")][3].text),
                 ]
-                if u.within(coords, region.centroid):
+                if u.within(coords, np.flip(region.centroid)):
                     plabel = cand[i("gtn")][0].text
 
         d.append([pH, ws, pT, ts, pC, plabel, marea, sRes, name])
