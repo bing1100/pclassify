@@ -243,11 +243,8 @@ def findOrientation(pC, coords):
     return h, t, ws
 
 def fixKeypoints(pC, coords, wThreshold, fThreshold, aThreshold):
-    h, t, ws = findOrientation(pC, coords)
+    cH, cT, cWs = findOrientation(pC, coords)
     cPC = pC
-    cH = coords[h]
-    cT = coords[t]
-    cWs = [coords[ws[0]], coords[ws[1]]]
     change = 0
 
     # Fix short head or tail
