@@ -268,8 +268,8 @@ def findKps(convex, mask, mcenter):
     
     # Calculate center point using geometry and centroid
     cp = [
-        (ws[0][0] + ws[1][0] + h[0])/6 + cp[0]/2,
-        (ws[0][1] + ws[1][1] + h[1])/6 + cp[1]/2
+        (ws[0][0] + ws[1][0] + h[0])/9 + 2*cp[0]/3,
+        (ws[0][1] + ws[1][1] + h[1])/9 + 2*cp[1]/3
     ]
     
     # Find the tail center using geometry
